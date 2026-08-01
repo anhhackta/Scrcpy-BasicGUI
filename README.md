@@ -1,6 +1,6 @@
 <div align="center">
   <img src="assets/logo.svg" alt="BasicMirror Logo" width="120"/>
-  <h1>BasicMirror</h1>
+  <h1>Scrcpy-BasicGUI</h1>
   <p><strong>Simple & Lightweight Android Screen Mirror for Windows</strong></p>
   
   <p>
@@ -23,11 +23,11 @@
 
 ## 🎯 What is BasicMirror?
 
-**BasicMirror** is a lightweight GUI wrapper for [scrcpy](https://github.com/Genymobile/scrcpy), the popular open-source Android screen mirroring tool. It provides an intuitive interface to mirror your Android device to your PC without any configuration hassle.
+**Scrcpy-BasicGUI(SBGUI)** is a lightweight GUI wrapper for [scrcpy](https://github.com/Genymobile/scrcpy), the popular open-source Android screen mirroring tool. It provides an intuitive interface to mirror your Android device to your PC without any configuration hassle.
 
 ### Why BasicMirror?
 
-| Feature | BasicMirror | Command Line |
+| Feature | Scrcpy-BasicGUI | Command Line |
 |---------|:-----------:|:------------:|
 | One-click mirroring | ✅ | ❌ |
 | Auto-download scrcpy | ✅ | ❌ |
