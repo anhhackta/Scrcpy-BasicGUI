@@ -1,409 +1,892 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BasicMirror - Simple Android Screen Mirror</title>
-    <meta name="description" content="Lightweight GUI for scrcpy - Mirror your Android device to PC with one click">
-    <meta name="keywords" content="scrcpy, android, screen mirror, screen cast, windows, gui">
+    <title>BasicMirror — Simple Android Screen Mirror for Windows</title>
+    <meta name="description" content="BasicMirror is a lightweight (~50KB) GUI for scrcpy. Mirror, control and record Android devices over USB or WiFi. Free & open source.">
+    <meta property="og:title" content="BasicMirror — Simple Android Screen Mirror">
+    <meta property="og:description" content="A ~50KB GUI for scrcpy. Mirror, control & record Android over USB or WiFi. Free & open source.">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#1a1b26">
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        /* ==================== Theme tokens ==================== */
         :root {
-            --bg-main: #1a1b26;
-            --bg-panel: #24283b;
-            --bg-input: #343850;
-            --accent-purple: #7c3aed;
-            --accent-indigo: #4f46e5;
-            --accent-teal: #14b8a6;
-            --accent-amber: #f59e0b;
-            --accent-rose: #f43f5e;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
+            --violet: #7c3aed;
+            --violet-2: #8b5cf6;
+            --indigo: #4f46e5;
+            --teal: #14b8a6;
+            --teal-2: #2dd4bf;
+            --amber: #f59e0b;
+            --rose: #f43f5e;
+            --font-display: 'Space Grotesk', 'Inter', 'Noto Sans JP', 'Noto Sans SC', sans-serif;
+            --font-body: 'Inter', -apple-system, 'Segoe UI', 'Noto Sans JP', 'Noto Sans SC', sans-serif;
+            --font-mono: 'JetBrains Mono', Consolas, monospace;
+            --grad: linear-gradient(135deg, var(--violet), var(--indigo));
+            --radius: 18px;
+            --nav-h: 64px;
+            --t: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* Dark (matches the app UI: #1a1b26 / #24283b) */
+        html[data-theme="dark"] {
+            color-scheme: dark;
+            --bg: #0f1120;
+            --bg-2: #1a1b26;
+            --panel: #24283b;
+            --panel-2: #343850;
+            --stroke: rgba(255, 255, 255, 0.08);
+            --stroke-2: rgba(255, 255, 255, 0.15);
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --nav-bg: rgba(26, 27, 38, 0.75);
+            --glow-violet: rgba(124, 58, 237, 0.35);
+            --glow-teal: rgba(20, 184, 166, 0.16);
+            --shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+            --grid-line: rgba(255, 255, 255, 0.035);
+            --chip-bg: rgba(255, 255, 255, 0.05);
         }
 
+        /* Light */
+        html[data-theme="light"] {
+            color-scheme: light;
+            --bg: #f4f5fb;
+            --bg-2: #ffffff;
+            --panel: #ffffff;
+            --panel-2: #eef0f8;
+            --stroke: rgba(26, 27, 38, 0.09);
+            --stroke-2: rgba(26, 27, 38, 0.17);
+            --text: #1a1b26;
+            --muted: #5b6478;
+            --nav-bg: rgba(255, 255, 255, 0.78);
+            --glow-violet: rgba(124, 58, 237, 0.14);
+            --glow-teal: rgba(20, 184, 166, 0.10);
+            --shadow: 0 24px 70px rgba(26, 27, 38, 0.14);
+            --grid-line: rgba(26, 27, 38, 0.045);
+            --chip-bg: rgba(26, 27, 38, 0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-main);
-            color: var(--text-primary);
-            line-height: 1.6;
-            min-height: 100vh;
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.65;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            transition: background var(--t), color var(--t);
         }
+        ::selection { background: rgba(124, 58, 237, 0.4); color: #fff; }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--panel-2); border-radius: 6px; }
 
-        /* Hero Section */
-        .hero {
-            background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-indigo) 100%);
-            padding: 80px 20px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
+        /* ==================== Backdrop ==================== */
+        .backdrop {
+            position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background:
+                radial-gradient(700px 420px at 85% -5%, var(--glow-violet), transparent 65%),
+                radial-gradient(600px 400px at 0% 30%, var(--glow-teal), transparent 60%),
+                var(--bg);
+            transition: background var(--t);
         }
-
-        .hero::before {
+        .backdrop::before {
             content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: pulse 15s ease-in-out infinite;
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, #000 35%, transparent 100%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, #000 35%, transparent 100%);
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.3; }
+        /* ==================== Nav ==================== */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            background: var(--nav-bg);
+            backdrop-filter: blur(18px) saturate(1.4);
+            -webkit-backdrop-filter: blur(18px) saturate(1.4);
+            border-bottom: 1px solid var(--stroke);
+            transition: background var(--t);
         }
-
-        .hero-content {
-            position: relative;
-            z-index: 1;
-            max-width: 800px;
-            margin: 0 auto;
+        .nav-inner {
+            max-width: 1140px; margin: 0 auto; height: var(--nav-h);
+            padding: 0 24px; display: flex; align-items: center; gap: 18px;
         }
-
-        .logo {
-            width: 100px;
-            height: 100px;
-            margin-bottom: 24px;
-            filter: drop-shadow(0 4px 20px rgba(0,0,0,0.3));
+        .brand {
+            display: flex; align-items: center; gap: 10px; text-decoration: none;
+            color: var(--text); font-family: var(--font-display); font-weight: 700; font-size: 1.06rem;
         }
-
-        .hero h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 16px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        .brand img { width: 30px; height: 30px; }
+        .nav-links { display: flex; align-items: center; gap: 2px; margin-left: 14px; }
+        .nav-links a {
+            color: var(--muted); text-decoration: none; font-size: 0.86rem; font-weight: 500;
+            padding: 8px 13px; border-radius: 9px; transition: 0.2s;
         }
+        .nav-links a:hover { color: var(--text); background: var(--chip-bg); }
+        .nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
-        .hero p {
-            font-size: 1.25rem;
-            opacity: 0.9;
-            margin-bottom: 32px;
+        .icon-btn {
+            width: 38px; height: 38px; border-radius: 10px; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--chip-bg); border: 1px solid var(--stroke);
+            color: var(--text); transition: 0.2s;
         }
+        .icon-btn:hover { border-color: var(--violet-2); }
+        .icon-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        html[data-theme="dark"] .ico-sun { display: none; }
+        html[data-theme="light"] .ico-moon { display: none; }
 
+        /* Language dropdown */
+        .lang { position: relative; }
+        .lang-btn { gap: 7px; padding: 0 12px; width: auto; font: 600 0.78rem var(--font-mono); }
+        .lang-btn svg { width: 15px; height: 15px; }
+        .lang-menu {
+            position: absolute; top: calc(100% + 8px); right: 0; min-width: 168px;
+            background: var(--panel); border: 1px solid var(--stroke-2); border-radius: 13px;
+            padding: 6px; display: none; flex-direction: column;
+            box-shadow: var(--shadow); z-index: 300;
+        }
+        .lang-menu.open { display: flex; }
+        .lang-menu button {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 9px 12px; border: 0; border-radius: 8px; cursor: pointer;
+            background: none; color: var(--text); font: 500 0.84rem var(--font-body); text-align: left;
+        }
+        .lang-menu button:hover { background: var(--panel-2); }
+        .lang-menu button.active { color: var(--teal-2); }
+        .lang-menu button .check { opacity: 0; font-size: 0.75rem; }
+        .lang-menu button.active .check { opacity: 1; }
+        html[data-theme="light"] .lang-menu button.active { color: var(--violet); }
+
+        .btn-nav {
+            display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+            background: var(--grad); color: #fff; font-weight: 600; font-size: 0.84rem;
+            padding: 9px 18px; border-radius: 10px; transition: 0.2s;
+            box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+        }
+        .btn-nav:hover { filter: brightness(1.12); transform: translateY(-1px); }
+        .burger { display: none; }
+
+        /* ==================== Buttons ==================== */
         .btn {
-            display: inline-block;
-            padding: 14px 32px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            margin: 8px;
+            display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
+            padding: 14px 28px; border-radius: 13px; font-weight: 600; font-size: 0.94rem;
+            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s, filter 0.2s;
         }
+        .btn:active { transform: scale(0.97); }
+        .btn-main { background: var(--grad); color: #fff; box-shadow: 0 10px 30px rgba(124, 58, 237, 0.4); }
+        .btn-main:hover { transform: translateY(-3px); filter: brightness(1.1); box-shadow: 0 14px 40px rgba(124, 58, 237, 0.5); }
+        .btn-alt { background: var(--panel); color: var(--text); border: 1px solid var(--stroke-2); }
+        .btn-alt:hover { transform: translateY(-3px); border-color: var(--violet-2); }
 
-        .btn-primary {
-            background: var(--text-primary);
-            color: var(--accent-purple);
+        /* ==================== Hero ==================== */
+        .hero { max-width: 1140px; margin: 0 auto; padding: calc(var(--nav-h) + 72px) 24px 30px; text-align: center; }
+        .pill {
+            display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px;
+            border-radius: 100px; border: 1px solid var(--stroke-2); background: var(--panel);
+            font: 500 0.74rem var(--font-mono); color: var(--teal-2); margin-bottom: 26px;
         }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        html[data-theme="light"] .pill { color: var(--violet); }
+        .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--teal-2); box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.5); animation: ripple 2s infinite; }
+        @keyframes ripple { 70% { box-shadow: 0 0 0 9px rgba(45, 212, 191, 0); } 100% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0); } }
+        .hero h1 {
+            font-family: var(--font-display); font-weight: 700; letter-spacing: -0.03em;
+            font-size: clamp(2.5rem, 5.4vw, 4rem); line-height: 1.08; margin-bottom: 20px;
         }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--text-primary);
-            border: 2px solid rgba(255,255,255,0.5);
+        .hero h1 .grad {
+            background: linear-gradient(120deg, var(--violet-2) 20%, var(--violet) 45%, var(--teal-2));
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
         }
-
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.1);
-            border-color: var(--text-primary);
+        .hero-sub { color: var(--muted); font-size: 1.06rem; max-width: 620px; margin: 0 auto 34px; }
+        .hero-sub code {
+            font: 500 0.85em var(--font-mono); color: var(--teal-2);
+            background: rgba(20, 184, 166, 0.12); padding: 2px 8px; border-radius: 6px;
         }
-
-        /* Features Section */
-        .features {
-            padding: 80px 20px;
-            max-width: 1200px;
-            margin: 0 auto;
+        html[data-theme="light"] .hero-sub code { color: #0d9488; }
+        .hero-ctas { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-bottom: 30px; }
+        .hero-meta {
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 10px 26px;
+            font: 400 0.78rem var(--font-mono); color: var(--muted);
         }
+        .hero-meta b { color: var(--text); font-weight: 500; }
 
-        .section-title {
-            text-align: center;
-            font-size: 2rem;
-            margin-bottom: 48px;
-            color: var(--text-primary);
+        /* ==================== App window mockup ==================== */
+        .stage { max-width: 860px; margin: 56px auto 0; position: relative; }
+        .stage::before {
+            content: ''; position: absolute; inset: 6% 4%;
+            background: linear-gradient(135deg, var(--glow-violet), var(--glow-teal));
+            filter: blur(60px); border-radius: 40px; z-index: 0;
         }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
+        /* The window keeps the app's real dark theme in both modes */
+        .win {
+            position: relative; z-index: 1; text-align: left;
+            background: #1a1b26; border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px; overflow: hidden; box-shadow: var(--shadow);
         }
-
-        .feature-card {
-            background: var(--bg-panel);
-            padding: 32px;
-            border-radius: 16px;
-            transition: all 0.3s ease;
+        .win-head {
+            display: flex; align-items: center; gap: 9px; padding: 10px 14px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+        }
+        .win-head .bl { width: 22px; height: 22px; }
+        .win-head .t { color: #fff; font: 700 0.82rem var(--font-body); }
+        .win-head .v { color: rgba(255,255,255,0.75); font: 400 0.7rem var(--font-mono); }
+        .win-head .sp { margin-left: auto; display: flex; gap: 6px; }
+        .win-head .mini {
+            color: #fff; font: 700 0.66rem var(--font-mono);
+            background: rgba(255, 255, 255, 0.2); border-radius: 7px; padding: 4px 9px;
+        }
+        .win-body { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 11px; font-size: 0.74rem; }
+        .win-sec { background: #24283b; border-radius: 11px; padding: 12px 14px; }
+        .win-sec.full { grid-column: 1 / -1; }
+        .win-label {
+            font: 600 0.58rem var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
+            color: #94a3b8; margin-bottom: 9px;
+        }
+        .dev {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            background: #343850; border-radius: 8px; padding: 8px 11px; margin-bottom: 6px;
             border: 1px solid transparent;
         }
-
-        .feature-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--accent-purple);
-            box-shadow: 0 12px 40px rgba(124, 58, 237, 0.15);
+        .dev:last-child { margin-bottom: 0; }
+        .dev.sel { border-color: rgba(20, 184, 166, 0.55); }
+        .dev .n { color: #f8fafc; font-weight: 600; font-size: 0.72rem; }
+        .dev .n small { display: block; color: #94a3b8; font: 400 0.58rem var(--font-mono); }
+        .tag { font: 600 0.55rem var(--font-mono); padding: 3px 8px; border-radius: 100px; flex-shrink: 0; }
+        .tag-usb { background: rgba(20, 184, 166, 0.16); color: #2dd4bf; }
+        .tag-wifi { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
+        .cfg { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+        .cfg:last-child { margin-bottom: 0; }
+        .cfg .k { color: #94a3b8; }
+        .cfg .val {
+            color: #f8fafc; background: #343850; border-radius: 6px; padding: 3px 10px;
+            font: 500 0.64rem var(--font-mono); min-width: 74px; text-align: center;
         }
-
-        .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 16px;
+        .checks { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chk { font-size: 0.62rem; padding: 5px 10px; border-radius: 100px; background: #343850; color: #94a3b8; }
+        .chk.on { background: rgba(124, 58, 237, 0.28); color: #e9e4ff; }
+        .win-actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+        .wbtn { flex: 1; text-align: center; padding: 10px 6px; border-radius: 9px; font-weight: 700; font-size: 0.7rem; }
+        .wbtn.p { background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff; }
+        .wbtn.s { background: #343850; color: #94a3b8; }
+        .win-status {
+            grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+            font: 500 0.62rem var(--font-mono); color: #2dd4bf;
         }
+        .win-status .pulse { width: 6px; height: 6px; }
 
-        .feature-card h3 {
-            font-size: 1.25rem;
-            margin-bottom: 12px;
-            color: var(--text-primary);
+        /* ==================== Sections ==================== */
+        section { padding: 96px 24px; }
+        .container { max-width: 1140px; margin: 0 auto; }
+        .shead { text-align: center; max-width: 640px; margin: 0 auto 56px; }
+        .kicker {
+            font: 600 0.7rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.24em;
+            color: var(--teal-2); margin-bottom: 14px;
         }
+        html[data-theme="light"] .kicker { color: var(--violet); }
+        .shead h2 { font-family: var(--font-display); font-size: clamp(1.8rem, 3.4vw, 2.6rem); letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 12px; }
+        .shead p { color: var(--muted); }
 
-        .feature-card p {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
+        /* Reveal */
+        .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+        .reveal.visible { opacity: 1; transform: none; }
+        .d1 { transition-delay: 0.08s; } .d2 { transition-delay: 0.16s; } .d3 { transition-delay: 0.24s; }
+
+        /* ==================== Features ==================== */
+        .fgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .fcard {
+            background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--radius);
+            padding: 28px 26px; transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s, background var(--t);
         }
-
-        /* How It Works */
-        .how-it-works {
-            background: var(--bg-panel);
-            padding: 80px 20px;
+        .fcard:hover { transform: translateY(-5px); border-color: var(--violet-2); box-shadow: 0 16px 44px rgba(124, 58, 237, 0.16); }
+        .fico {
+            width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; margin-bottom: 18px;
+            background: rgba(124, 58, 237, 0.12); border: 1px solid rgba(124, 58, 237, 0.25);
         }
+        .fico.t { background: rgba(20, 184, 166, 0.1); border-color: rgba(20, 184, 166, 0.28); }
+        .fico.a { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.28); }
+        .fcard h3 { font-family: var(--font-display); font-size: 1.06rem; font-weight: 600; margin-bottom: 8px; }
+        .fcard p { color: var(--muted); font-size: 0.89rem; }
 
-        .steps {
-            max-width: 800px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 32px;
-        }
-
+        /* ==================== Steps ==================== */
+        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
         .step {
-            display: flex;
-            align-items: flex-start;
-            gap: 24px;
+            background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--radius);
+            padding: 30px 26px; position: relative; transition: border-color 0.3s, background var(--t);
         }
-
-        .step-number {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-teal));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.25rem;
-            flex-shrink: 0;
+        .step:hover { border-color: rgba(20, 184, 166, 0.5); }
+        .step .num {
+            font: 600 2.6rem/1 var(--font-display); margin-bottom: 16px;
+            background: linear-gradient(180deg, var(--violet-2), transparent);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
         }
+        .step h3 { font-family: var(--font-display); font-size: 1.04rem; margin-bottom: 8px; }
+        .step p { color: var(--muted); font-size: 0.88rem; }
+        .step code { font: 500 0.8em var(--font-mono); color: var(--teal-2); background: rgba(20, 184, 166, 0.1); padding: 1px 7px; border-radius: 5px; }
+        html[data-theme="light"] .step code { color: #0d9488; }
 
-        .step-content h3 {
-            margin-bottom: 8px;
+        /* ==================== Options showcase ==================== */
+        .opts-wrap { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 56px; align-items: start; }
+        .opts-side { position: sticky; top: calc(var(--nav-h) + 28px); }
+        .opts-side .shead { text-align: left; margin: 0; }
+        .opt { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 13px 18px; background: var(--panel); border: 1px solid var(--stroke); border-radius: 12px; margin-bottom: 9px; transition: border-color 0.25s, background var(--t); }
+        .opt:hover { border-color: rgba(124, 58, 237, 0.5); }
+        .opt .f { font: 500 0.78rem var(--font-mono); color: var(--violet-2); }
+        html[data-theme="light"] .opt .f { color: var(--violet); }
+        .opt .d { color: var(--muted); font-size: 0.77rem; text-align: right; }
+
+        /* ==================== Compare ==================== */
+        .table-wrap {
+            max-width: 760px; margin: 0 auto; overflow: hidden;
+            border: 1px solid var(--stroke); border-radius: var(--radius);
         }
+        table { width: 100%; border-collapse: collapse; background: var(--panel); transition: background var(--t); }
+        th, td { padding: 14px 24px; text-align: left; font-size: 0.9rem; border-bottom: 1px solid var(--stroke); }
+        th { background: var(--panel-2); font-family: var(--font-display); font-weight: 600; font-size: 0.86rem; }
+        tr:last-child td { border-bottom: 0; }
+        td:nth-child(2), th:nth-child(2) { color: var(--teal-2); font-weight: 600; }
+        html[data-theme="light"] td:nth-child(2), html[data-theme="light"] th:nth-child(2) { color: #0d9488; }
+        td:nth-child(3) { color: var(--muted); }
 
-        .step-content p {
-            color: var(--text-secondary);
+        /* ==================== Download ==================== */
+        .dl-card {
+            position: relative; text-align: center; border-radius: 26px; padding: 66px 32px; overflow: hidden;
+            border: 1px solid rgba(124, 58, 237, 0.35);
+            background: radial-gradient(560px circle at 50% -25%, rgba(124, 58, 237, 0.22), transparent 62%), var(--panel);
+            transition: background var(--t);
         }
+        .dl-card h2 { font-family: var(--font-display); font-size: clamp(1.8rem, 3.2vw, 2.5rem); letter-spacing: -0.02em; margin-bottom: 12px; }
+        .dl-card > p { color: var(--muted); margin-bottom: 32px; }
+        .chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 9px; margin-top: 28px; }
+        .chip { font: 500 0.72rem var(--font-mono); padding: 7px 15px; border-radius: 100px; border: 1px solid var(--stroke-2); background: var(--chip-bg); color: var(--muted); }
+        .chip b { color: var(--teal-2); font-weight: 600; }
+        html[data-theme="light"] .chip b { color: #0d9488; }
 
-        /* Download Section */
-        .download {
-            padding: 80px 20px;
-            text-align: center;
-            max-width: 600px;
-            margin: 0 auto;
+        /* ==================== Footer ==================== */
+        footer { border-top: 1px solid var(--stroke); padding: 42px 24px; }
+        .foot { max-width: 1140px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+        .foot .l { display: flex; align-items: center; gap: 11px; color: var(--muted); font-size: 0.82rem; }
+        .foot .l img { width: 26px; height: 26px; }
+        .foot .l a, .foot-links a { color: var(--teal-2); text-decoration: none; }
+        html[data-theme="light"] .foot .l a, html[data-theme="light"] .foot-links a { color: var(--violet); }
+        .foot-links { display: flex; gap: 18px; }
+        .foot-links a { color: var(--muted); font-size: 0.82rem; transition: color 0.2s; }
+        .foot-links a:hover { color: var(--text); }
+
+        /* ==================== Responsive ==================== */
+        @media (max-width: 960px) {
+            .fgrid { grid-template-columns: repeat(2, 1fr); }
+            .steps { grid-template-columns: 1fr; }
+            .opts-wrap { grid-template-columns: 1fr; gap: 36px; }
+            .opts-side { position: static; }
+            .win-body { grid-template-columns: 1fr; }
         }
-
-        .download-box {
-            background: var(--bg-panel);
-            padding: 48px;
-            border-radius: 24px;
-            border: 2px solid var(--accent-purple);
-        }
-
-        .download h2 {
-            font-size: 1.75rem;
-            margin-bottom: 16px;
-        }
-
-        .download p {
-            color: var(--text-secondary);
-            margin-bottom: 32px;
-        }
-
-        .file-size {
-            display: inline-block;
-            background: var(--bg-input);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            color: var(--accent-teal);
-            margin-top: 16px;
-        }
-
-        /* Footer */
-        footer {
-            background: var(--bg-panel);
-            padding: 40px 20px;
-            text-align: center;
-            border-top: 1px solid var(--bg-input);
-        }
-
-        footer p {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        footer a {
-            color: var(--accent-purple);
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            text-decoration: underline;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2rem;
+        @media (max-width: 760px) {
+            .nav-links { display: none; }
+            .nav-links.open {
+                display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+                position: absolute; top: var(--nav-h); left: 12px; right: 12px;
+                background: var(--panel); border: 1px solid var(--stroke-2); border-radius: 14px;
+                padding: 10px; box-shadow: var(--shadow);
             }
-
-            .hero p {
-                font-size: 1rem;
-            }
-
-            .btn {
-                display: block;
-                margin: 12px auto;
-                max-width: 280px;
-            }
-
-            .step {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .step-number {
-                margin: 0 auto;
-            }
+            .nav-links.open a { padding: 11px 14px; }
+            .burger { display: inline-flex; }
+            .fgrid { grid-template-columns: 1fr; }
+            section { padding: 72px 18px; }
+            .hero { padding-left: 18px; padding-right: 18px; }
+            th, td { padding: 12px 14px; font-size: 0.8rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+            html { scroll-behavior: auto; }
         }
     </style>
 </head>
 <body>
-    <!-- Hero -->
-    <section class="hero">
-        <div class="hero-content">
-            <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <linearGradient id="screen" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#14b8a6"/>
-                        <stop offset="100%" style="stop-color:#0d9488"/>
-                    </linearGradient>
-                </defs>
-                <circle cx="50" cy="50" r="48" fill="rgba(255,255,255,0.15)"/>
-                <rect x="30" y="15" width="40" height="70" rx="6" ry="6" fill="#1a1b26" stroke="#f8fafc" stroke-width="2"/>
-                <rect x="34" y="22" width="32" height="52" rx="2" ry="2" fill="url(#screen)"/>
-                <ellipse cx="50" cy="80" rx="4" ry="2" fill="#4f46e5"/>
-                <path d="M 75 35 L 85 50 L 75 65" stroke="#f8fafc" stroke-width="3" fill="none" stroke-linecap="round"/>
-                <path d="M 25 35 L 15 50 L 25 65" stroke="#f8fafc" stroke-width="3" fill="none" stroke-linecap="round"/>
-            </svg>
-            <h1>BasicMirror</h1>
-            <p>Simple & Lightweight Android Screen Mirror for Windows</p>
-            <div>
-                <a href="https://github.com/anhhackta/BasicMirror/releases" class="btn btn-primary">⬇ Download Now</a>
-                <a href="https://github.com/anhhackta/BasicMirror" class="btn btn-secondary">View on GitHub</a>
+    <div class="backdrop"></div>
+
+    <!-- ==================== Nav ==================== -->
+    <nav>
+        <div class="nav-inner">
+            <a href="#" class="brand"><img src="logo.svg" alt="BasicMirror logo">BasicMirror</a>
+            <div class="nav-links" id="navLinks">
+                <a href="#features" data-i18n="nav.features">Features</a>
+                <a href="#how" data-i18n="nav.how">How it works</a>
+                <a href="#options" data-i18n="nav.options">Options</a>
+                <a href="#compare" data-i18n="nav.compare">Compare</a>
+            </div>
+            <div class="nav-right">
+                <!-- Theme toggle -->
+                <button class="icon-btn" id="themeBtn" aria-label="Toggle theme">
+                    <svg class="ico-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
+                    <svg class="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+                </button>
+                <!-- Language dropdown -->
+                <div class="lang">
+                    <button class="icon-btn lang-btn" id="langBtn" aria-label="Language">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.7 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.7-4-9s1.5-6.4 4-9z"/></svg>
+                        <span id="langCode">EN</span>
+                    </button>
+                    <div class="lang-menu" id="langMenu">
+                        <button data-lang="en">English <span class="check">✓</span></button>
+                        <button data-lang="vi">Tiếng Việt <span class="check">✓</span></button>
+                        <button data-lang="ja">日本語 <span class="check">✓</span></button>
+                        <button data-lang="zh">中文 <span class="check">✓</span></button>
+                    </div>
+                </div>
+                <a href="https://github.com/anhhackta/Scrcpy-BasicGUI/releases" class="btn-nav" data-i18n="nav.download">Download</a>
+                <button class="icon-btn burger" id="burger" aria-label="Menu">
+                    <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                </button>
             </div>
         </div>
-    </section>
+    </nav>
 
-    <!-- Features -->
-    <section class="features">
-        <h2 class="section-title">✨ Features</h2>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🚀</div>
-                <h3>One-Click Mirroring</h3>
-                <p>Just connect your device and click Mirror. No command line, no configuration.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📱</div>
-                <h3>Multi-Device Support</h3>
-                <p>Mirror multiple Android devices simultaneously via USB or WiFi.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🎬</div>
-                <h3>Screen Recording</h3>
-                <p>Record your device screen with Start/Stop controls. Save as MP4 or MKV.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🌐</div>
-                <h3>Multi-Language</h3>
-                <p>Available in English and Vietnamese. Easy to add more languages.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📁</div>
-                <h3>Auto-Download</h3>
-                <p>Automatically downloads scrcpy from official repository on first launch.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">⚡</div>
-                <h3>Lightweight</h3>
-                <p>Only ~50KB! Minimal footprint, maximum performance.</p>
-            </div>
+    <!-- ==================== Hero ==================== -->
+    <header class="hero">
+        <div class="pill reveal visible"><span class="pulse"></span><span data-i18n="hero.pill">v1.0 · Free & Open Source · MIT</span></div>
+        <h1 class="reveal visible" data-i18n-html="hero.title">Mirror Android to PC.<br><span class="grad">One click. Zero setup.</span></h1>
+        <p class="hero-sub reveal visible" data-i18n-html="hero.sub">BasicMirror is a <code>~50&nbsp;KB</code> portable GUI for scrcpy — mirror, control and record any Android device over USB or WiFi. No command line required.</p>
+        <div class="hero-ctas reveal visible">
+            <a href="https://github.com/anhhackta/Scrcpy-BasicGUI/releases" class="btn btn-main" data-i18n="hero.dl">⬇ Download for Windows</a>
+            <a href="https://github.com/anhhackta/Scrcpy-BasicGUI" target="_blank" rel="noopener" class="btn btn-alt" data-i18n="hero.gh">★ View on GitHub</a>
         </div>
-    </section>
+        <div class="hero-meta reveal visible">
+            <span data-i18n-html="hero.m1">size <b>~50 KB</b></span>
+            <span data-i18n-html="hero.m2">os <b>Windows 7–11</b></span>
+            <span data-i18n-html="hero.m3">runtime <b>.NET 4.8</b></span>
+            <span data-i18n-html="hero.m4">engine <b>scrcpy</b></span>
+        </div>
 
-    <!-- How It Works -->
-    <section class="how-it-works">
-        <h2 class="section-title">🛠️ How It Works</h2>
-        <div class="steps">
-            <div class="step">
-                <div class="step-number">1</div>
-                <div class="step-content">
-                    <h3>Download BasicMirror.exe</h3>
-                    <p>Just one small file (~50KB). No installation required.</p>
+        <!-- Accurate app window mockup (MainForm layout) -->
+        <div class="stage reveal visible">
+            <div class="win">
+                <div class="win-head">
+                    <img class="bl" src="logo.svg" alt="">
+                    <span class="t">BasicMirror</span><span class="v">v1.0</span>
+                    <span class="sp"><span class="mini">EN</span><span class="mini">⚙</span></span>
+                </div>
+                <div class="win-body">
+                    <div class="win-sec full">
+                        <div class="win-label" data-i18n="mock.devices">Devices</div>
+                        <div class="dev sel">
+                            <span class="n">Galaxy S23<small>R5CR80AB12X</small></span>
+                            <span class="tag tag-usb">USB</span>
+                        </div>
+                        <div class="dev">
+                            <span class="n">Xiaomi Pad 6<small>192.168.1.20:5555</small></span>
+                            <span class="tag tag-wifi">WiFi</span>
+                        </div>
+                    </div>
+                    <div class="win-sec">
+                        <div class="win-label" data-i18n="mock.video">Video</div>
+                        <div class="cfg"><span class="k" data-i18n="mock.size">Size</span><span class="val">1080</span></div>
+                        <div class="cfg"><span class="k" data-i18n="mock.bitrate">Bitrate</span><span class="val">8M</span></div>
+                        <div class="cfg"><span class="k">FPS</span><span class="val">60</span></div>
+                    </div>
+                    <div class="win-sec">
+                        <div class="win-label" data-i18n="mock.audio">Audio &amp; Control</div>
+                        <div class="checks">
+                            <span class="chk on" data-i18n="mock.c1">🔊 Audio 11+</span>
+                            <span class="chk on" data-i18n="mock.c2">☀ Keep Screen On</span>
+                            <span class="chk on" data-i18n="mock.c3">📌 Always on Top</span>
+                            <span class="chk" data-i18n="mock.c4">🖼 Borderless</span>
+                            <span class="chk" data-i18n="mock.c5">⛶ Fullscreen</span>
+                            <span class="chk" data-i18n="mock.c6">👁 View Only</span>
+                        </div>
+                    </div>
+                    <div class="win-sec full">
+                        <div class="win-label" data-i18n="mock.rec">Recording</div>
+                        <div class="cfg"><span class="k" data-i18n="mock.output">Output</span><span class="val">record.mp4</span></div>
+                    </div>
+                    <div class="win-actions">
+                        <div class="wbtn p">▶ <span data-i18n="mock.mirror">Mirror</span></div>
+                        <div class="wbtn s" data-i18n="mock.mirrorall">Mirror All</div>
+                        <div class="wbtn s" data-i18n="mock.refresh">⟳ Refresh</div>
+                        <div class="wbtn s" data-i18n="mock.wifi">📶 Open WiFi Port</div>
+                    </div>
+                    <div class="win-status"><span class="pulse"></span><span data-i18n="mock.status">Ready · 2 devices found</span></div>
                 </div>
             </div>
-            <div class="step">
-                <div class="step-number">2</div>
-                <div class="step-content">
-                    <h3>Run & Accept scrcpy Download</h3>
-                    <p>On first launch, it will download scrcpy (~15MB) from the official repository.</p>
-                </div>
+        </div>
+    </header>
+
+    <!-- ==================== Features ==================== -->
+    <section id="features">
+        <div class="container">
+            <div class="shead reveal">
+                <div class="kicker" data-i18n="f.kicker">Features</div>
+                <h2 data-i18n="f.title">Small app. Serious control.</h2>
+                <p data-i18n="f.sub">Everything scrcpy can do — wrapped in an interface anyone can use.</p>
             </div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <div class="step-content">
-                    <h3>Connect Your Device</h3>
-                    <p>Enable USB debugging, connect via USB, and click Mirror!</p>
+            <div class="fgrid">
+                <div class="fcard reveal">
+                    <div class="fico">🚀</div>
+                    <h3 data-i18n="f1.t">One-Click Mirroring</h3>
+                    <p data-i18n="f1.d">Connect your device and press Mirror. BasicMirror builds the right scrcpy command for you — no terminal, no flags to memorize.</p>
+                </div>
+                <div class="fcard reveal d1">
+                    <div class="fico t">📱</div>
+                    <h3 data-i18n="f2.t">Multi-Device</h3>
+                    <p data-i18n="f2.d">Mirror several phones at once via USB or WiFi, and save them as named device profiles for next time.</p>
+                </div>
+                <div class="fcard reveal d2">
+                    <div class="fico">📶</div>
+                    <h3 data-i18n="f3.t">USB → WiFi</h3>
+                    <p data-i18n="f3.d">Open a WiFi port once, unplug the cable, and keep mirroring wirelessly over your network.</p>
+                </div>
+                <div class="fcard reveal">
+                    <div class="fico a">🎬</div>
+                    <h3 data-i18n="f4.t">Screen Recording</h3>
+                    <p data-i18n="f4.d">Start / stop controls with MP4 and MKV output and a custom save path, right from the main window.</p>
+                </div>
+                <div class="fcard reveal d1">
+                    <div class="fico t">📥</div>
+                    <h3 data-i18n="f5.t">Auto scrcpy Download</h3>
+                    <p data-i18n="f5.d">On first launch, scrcpy is fetched straight from Genymobile's official repository — binaries are never re-hosted.</p>
+                </div>
+                <div class="fcard reveal d2">
+                    <div class="fico">⚡</div>
+                    <h3 data-i18n="f6.t">Lightweight &amp; Portable</h3>
+                    <p data-i18n="f6.d">A single ~50 KB exe. No installer, no dependencies beyond .NET Framework 4.8, which ships with Windows 10+.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Download -->
-    <section class="download">
-        <div class="download-box">
-            <h2>Ready to Mirror?</h2>
-            <p>Download BasicMirror and start mirroring your Android device in seconds.</p>
-            <a href="https://github.com/anhhackta/BasicMirror/releases" class="btn btn-primary">⬇ Download BasicMirror v1.0</a>
-            <div class="file-size">📦 ~50KB • Windows 7/8/10/11</div>
+    <!-- ==================== How it works ==================== -->
+    <section id="how" style="padding-top:0">
+        <div class="container">
+            <div class="shead reveal">
+                <div class="kicker" data-i18n="h.kicker">Quick start</div>
+                <h2 data-i18n="h.title">Zero to mirrored in three steps</h2>
+                <p data-i18n="h.sub">Under a minute, start to finish.</p>
+            </div>
+            <div class="steps">
+                <div class="step reveal">
+                    <div class="num">01</div>
+                    <h3 data-i18n="h1.t">Download the exe</h3>
+                    <p data-i18n-html="h1.d">Grab <code>BasicMirror.exe</code> from GitHub Releases — one ~50 KB portable file, nothing to install.</p>
+                </div>
+                <div class="step reveal d1">
+                    <div class="num">02</div>
+                    <h3 data-i18n="h2.t">Let it fetch scrcpy</h3>
+                    <p data-i18n="h2.d">On first launch it downloads scrcpy (~15 MB) directly from the official Genymobile repository.</p>
+                </div>
+                <div class="step reveal d2">
+                    <div class="num">03</div>
+                    <h3 data-i18n="h3.t">Connect &amp; mirror</h3>
+                    <p data-i18n-html="h3.d">Enable USB debugging, plug in your phone, hit <code>Refresh</code> → <code>Mirror</code>. Done.</p>
+                </div>
+            </div>
         </div>
     </section>
 
-    <!-- Footer -->
+    <!-- ==================== Options ==================== -->
+    <section id="options" style="padding-top:0">
+        <div class="container opts-wrap">
+            <div class="opts-side shead reveal">
+                <div class="kicker" data-i18n="o.kicker">Under the hood</div>
+                <h2 data-i18n="o.title">Every scrcpy flag, one toggle away</h2>
+                <p data-i18n="o.sub">BasicMirror maps scrcpy's most useful options to simple dropdowns and checkboxes — the same flags power users type by hand.</p>
+            </div>
+            <div class="reveal d1">
+                <div class="opt"><span class="f">--tcpip</span><span class="d" data-i18n="o1.d">wireless mirroring</span></div>
+                <div class="opt"><span class="f">--max-size · --max-fps · --video-bit-rate</span><span class="d" data-i18n="o2.d">full quality control</span></div>
+                <div class="opt"><span class="f">--video-codec</span><span class="d" data-i18n="o3.d">H.264 / H.265 / AV1</span></div>
+                <div class="opt"><span class="f">--audio-codec=opus</span><span class="d" data-i18n="o4.d">device audio, Android 11+</span></div>
+                <div class="opt"><span class="f">--no-control</span><span class="d" data-i18n="o5.d">view-only mode</span></div>
+                <div class="opt"><span class="f">--stay-awake · --turn-screen-off</span><span class="d" data-i18n="o6.d">battery-friendly</span></div>
+                <div class="opt"><span class="f">--show-touches</span><span class="d" data-i18n="o7.d">perfect for demos</span></div>
+                <div class="opt"><span class="f">--always-on-top · --window-borderless · --fullscreen</span><span class="d" data-i18n="o8.d">window your way</span></div>
+                <div class="opt"><span class="f">--record</span><span class="d" data-i18n="o9.d">MP4 / MKV capture</span></div>
+                <div class="opt"><span class="f">--display-id · --window-title</span><span class="d" data-i18n="o10.d">multi-display setups</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== Compare ==================== -->
+    <section id="compare" style="padding-top:0">
+        <div class="container">
+            <div class="shead reveal">
+                <div class="kicker" data-i18n="c.kicker">Why BasicMirror</div>
+                <h2 data-i18n="c.title">GUI vs. command line</h2>
+                <p data-i18n="c.sub">Same engine, none of the typing.</p>
+            </div>
+            <div class="table-wrap reveal">
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-i18n="c.h1">Feature</th>
+                            <th>BasicMirror</th>
+                            <th data-i18n="c.h3">Command line</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td data-i18n="c.r1">One-click mirroring</td><td>✅</td><td>❌</td></tr>
+                        <tr><td data-i18n="c.r2">Auto-download scrcpy</td><td>✅</td><td>❌</td></tr>
+                        <tr><td data-i18n="c.r3">Multi-device support</td><td>✅</td><td data-i18n="c.manual">Manual</td></tr>
+                        <tr><td data-i18n="c.r4">Saved device profiles</td><td>✅</td><td>❌</td></tr>
+                        <tr><td data-i18n="c.r5">Video recording</td><td>✅</td><td data-i18n="c.manual2">Manual</td></tr>
+                        <tr><td data-i18n="c.r6">Multi-language UI</td><td>✅</td><td>❌</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== Download ==================== -->
+    <section id="download" style="padding-top:0">
+        <div class="container">
+            <div class="dl-card reveal">
+                <div class="kicker" data-i18n="d.kicker">Download</div>
+                <h2 data-i18n="d.title">Ready when you are.</h2>
+                <p data-i18n="d.sub">Free, open source, and about 3% the size of a photo from your phone.</p>
+                <a href="https://github.com/anhhackta/Scrcpy-BasicGUI/releases" class="btn btn-main" data-i18n="d.btn">⬇ Download BasicMirror v1.0</a>
+                <div class="chips">
+                    <span class="chip" data-i18n-html="d.c1">📦 <b>~50 KB</b> portable</span>
+                    <span class="chip" data-i18n-html="d.c2">🪟 Windows 7 / 8 / 10 / 11</span>
+                    <span class="chip" data-i18n-html="d.c3">🧩 .NET Framework 4.8</span>
+                    <span class="chip" data-i18n-html="d.c4">📄 MIT License</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== Footer ==================== -->
     <footer>
-        <p>
-            BasicMirror is a GUI wrapper for <a href="https://github.com/Genymobile/scrcpy">scrcpy</a> by Genymobile.<br>
-            Made with ❤️ by <a href="https://github.com/anhhackta">anhhackta</a> | 
-            <a href="https://github.com/anhhackta/BasicMirror">GitHub</a>
-        </p>
+        <div class="foot">
+            <div class="l">
+                <img src="logo.svg" alt="BasicMirror">
+                <span data-i18n-html="foot.text">BasicMirror — a GUI wrapper for <a href="https://github.com/Genymobile/scrcpy">scrcpy</a> by Genymobile. Made with ❤️ by anhhackta.</span>
+            </div>
+            <div class="foot-links">
+                <a href="https://github.com/anhhackta/Scrcpy-BasicGUI" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://github.com/anhhackta/Scrcpy-BasicGUI/releases" target="_blank" rel="noopener" data-i18n="foot.releases">Releases</a>
+                <a href="https://github.com/anhhackta/Scrcpy-BasicGUI/issues" target="_blank" rel="noopener" data-i18n="foot.issues">Issues</a>
+                <a href="https://github.com/anhhackta/Scrcpy-BasicGUI/blob/main/LICENSE" target="_blank" rel="noopener">MIT</a>
+            </div>
+        </div>
     </footer>
+
+    <script>
+    /* ==================== i18n ==================== */
+    const I18N = {
+        en: {
+            'nav.features': 'Features', 'nav.how': 'How it works', 'nav.options': 'Options', 'nav.compare': 'Compare', 'nav.download': 'Download',
+            'hero.pill': 'v1.0 · Free & Open Source · MIT',
+            'hero.title': 'Mirror Android to PC.<br><span class="grad">One click. Zero setup.</span>',
+            'hero.sub': 'BasicMirror is a <code>~50&nbsp;KB</code> portable GUI for scrcpy — mirror, control and record any Android device over USB or WiFi. No command line required.',
+            'hero.dl': '⬇ Download for Windows', 'hero.gh': '★ View on GitHub',
+            'hero.m1': 'size <b>~50 KB</b>', 'hero.m2': 'os <b>Windows 7–11</b>', 'hero.m3': 'runtime <b>.NET 4.8</b>', 'hero.m4': 'engine <b>scrcpy</b>',
+            'mock.devices': 'Devices', 'mock.video': 'Video', 'mock.size': 'Size', 'mock.bitrate': 'Bitrate',
+            'mock.audio': 'Audio & Control', 'mock.rec': 'Recording', 'mock.output': 'Output',
+            'mock.c1': '🔊 Audio 11+', 'mock.c2': '☀ Keep Screen On', 'mock.c3': '📌 Always on Top', 'mock.c4': '🖼 Borderless', 'mock.c5': '⛶ Fullscreen', 'mock.c6': '👁 View Only',
+            'mock.mirror': 'Mirror', 'mock.mirrorall': 'Mirror All', 'mock.refresh': '⟳ Refresh', 'mock.wifi': '📶 Open WiFi Port',
+            'mock.status': 'Ready · 2 devices found',
+            'f.kicker': 'Features', 'f.title': 'Small app. Serious control.', 'f.sub': 'Everything scrcpy can do — wrapped in an interface anyone can use.',
+            'f1.t': 'One-Click Mirroring', 'f1.d': 'Connect your device and press Mirror. BasicMirror builds the right scrcpy command for you — no terminal, no flags to memorize.',
+            'f2.t': 'Multi-Device', 'f2.d': 'Mirror several phones at once via USB or WiFi, and save them as named device profiles for next time.',
+            'f3.t': 'USB → WiFi', 'f3.d': 'Open a WiFi port once, unplug the cable, and keep mirroring wirelessly over your network.',
+            'f4.t': 'Screen Recording', 'f4.d': 'Start / stop controls with MP4 and MKV output and a custom save path, right from the main window.',
+            'f5.t': 'Auto scrcpy Download', 'f5.d': "On first launch, scrcpy is fetched straight from Genymobile's official repository — binaries are never re-hosted.",
+            'f6.t': 'Lightweight & Portable', 'f6.d': 'A single ~50 KB exe. No installer, no dependencies beyond .NET Framework 4.8, which ships with Windows 10+.',
+            'h.kicker': 'Quick start', 'h.title': 'Zero to mirrored in three steps', 'h.sub': 'Under a minute, start to finish.',
+            'h1.t': 'Download the exe', 'h1.d': 'Grab <code>BasicMirror.exe</code> from GitHub Releases — one ~50 KB portable file, nothing to install.',
+            'h2.t': 'Let it fetch scrcpy', 'h2.d': 'On first launch it downloads scrcpy (~15 MB) directly from the official Genymobile repository.',
+            'h3.t': 'Connect & mirror', 'h3.d': 'Enable USB debugging, plug in your phone, hit <code>Refresh</code> → <code>Mirror</code>. Done.',
+            'o.kicker': 'Under the hood', 'o.title': 'Every scrcpy flag, one toggle away', 'o.sub': "BasicMirror maps scrcpy's most useful options to simple dropdowns and checkboxes — the same flags power users type by hand.",
+            'o1.d': 'wireless mirroring', 'o2.d': 'full quality control', 'o3.d': 'H.264 / H.265 / AV1', 'o4.d': 'device audio, Android 11+',
+            'o5.d': 'view-only mode', 'o6.d': 'battery-friendly', 'o7.d': 'perfect for demos', 'o8.d': 'window your way', 'o9.d': 'MP4 / MKV capture', 'o10.d': 'multi-display setups',
+            'c.kicker': 'Why BasicMirror', 'c.title': 'GUI vs. command line', 'c.sub': 'Same engine, none of the typing.',
+            'c.h1': 'Feature', 'c.h3': 'Command line', 'c.manual': 'Manual', 'c.manual2': 'Manual',
+            'c.r1': 'One-click mirroring', 'c.r2': 'Auto-download scrcpy', 'c.r3': 'Multi-device support', 'c.r4': 'Saved device profiles', 'c.r5': 'Video recording', 'c.r6': 'Multi-language UI',
+            'd.kicker': 'Download', 'd.title': 'Ready when you are.', 'd.sub': 'Free, open source, and about 3% the size of a photo from your phone.', 'd.btn': '⬇ Download BasicMirror v1.0',
+            'd.c1': '📦 <b>~50 KB</b> portable', 'd.c2': '🪟 Windows 7 / 8 / 10 / 11', 'd.c3': '🧩 .NET Framework 4.8', 'd.c4': '📄 MIT License',
+            'foot.text': 'BasicMirror — a GUI wrapper for <a href="https://github.com/Genymobile/scrcpy">scrcpy</a> by Genymobile. Made with ❤️ by anhhackta.',
+            'foot.releases': 'Releases', 'foot.issues': 'Issues'
+        },
+        vi: {
+            'nav.features': 'Tính năng', 'nav.how': 'Cách dùng', 'nav.options': 'Tùy chọn', 'nav.compare': 'So sánh', 'nav.download': 'Tải xuống',
+            'hero.pill': 'v1.0 · Mã nguồn mở miễn phí · MIT',
+            'hero.title': 'Chiếu Android lên PC.<br><span class="grad">Một cú click. Không cần cài đặt.</span>',
+            'hero.sub': 'BasicMirror là GUI portable <code>~50&nbsp;KB</code> cho scrcpy — chiếu, điều khiển và quay màn hình Android qua USB hoặc WiFi. Không cần dòng lệnh.',
+            'hero.dl': '⬇ Tải cho Windows', 'hero.gh': '★ Xem trên GitHub',
+            'hero.m1': 'dung lượng <b>~50 KB</b>', 'hero.m2': 'hệ điều hành <b>Windows 7–11</b>', 'hero.m3': 'runtime <b>.NET 4.8</b>', 'hero.m4': 'engine <b>scrcpy</b>',
+            'mock.devices': 'Thiết bị', 'mock.video': 'Video', 'mock.size': 'Kích thước', 'mock.bitrate': 'Bitrate',
+            'mock.audio': 'Âm thanh & Điều khiển', 'mock.rec': 'Quay màn hình', 'mock.output': 'Lưu tại',
+            'mock.c1': '🔊 Âm thanh 11+', 'mock.c2': '☀ Giữ màn hình sáng', 'mock.c3': '📌 Luôn trên cùng', 'mock.c4': '🖼 Không viền', 'mock.c5': '⛶ Toàn màn hình', 'mock.c6': '👁 Chỉ xem',
+            'mock.mirror': 'Mirror', 'mock.mirrorall': 'Mirror tất cả', 'mock.refresh': '⟳ Làm mới', 'mock.wifi': '📶 Mở Port WiFi',
+            'mock.status': 'Sẵn sàng · tìm thấy 2 thiết bị',
+            'f.kicker': 'Tính năng', 'f.title': 'App nhỏ. Điều khiển mạnh.', 'f.sub': 'Mọi sức mạnh của scrcpy — gói trong giao diện ai cũng dùng được.',
+            'f1.t': 'Mirror một cú click', 'f1.d': 'Kết nối thiết bị và bấm Mirror. BasicMirror tự tạo lệnh scrcpy chuẩn cho bạn — không terminal, không cần nhớ flag.',
+            'f2.t': 'Đa thiết bị', 'f2.d': 'Mirror nhiều điện thoại cùng lúc qua USB hoặc WiFi, lưu thành hồ sơ thiết bị cho lần sau.',
+            'f3.t': 'USB → WiFi', 'f3.d': 'Mở port WiFi một lần, rút cáp, và tiếp tục mirror không dây qua mạng nội bộ.',
+            'f4.t': 'Quay màn hình', 'f4.d': 'Nút Start / Stop, xuất MP4 và MKV với đường dẫn tùy chọn, ngay trên cửa sổ chính.',
+            'f5.t': 'Tự tải scrcpy', 'f5.d': 'Lần đầu chạy, scrcpy được tải trực tiếp từ repo chính thức của Genymobile — không host lại file nhị phân.',
+            'f6.t': 'Nhẹ & Portable', 'f6.d': 'Một file exe ~50 KB duy nhất. Không cài đặt, chỉ cần .NET Framework 4.8 có sẵn trên Windows 10+.',
+            'h.kicker': 'Bắt đầu nhanh', 'h.title': 'Ba bước là xong', 'h.sub': 'Chưa tới một phút, từ đầu đến cuối.',
+            'h1.t': 'Tải file exe', 'h1.d': 'Tải <code>BasicMirror.exe</code> từ GitHub Releases — một file portable ~50 KB, không cần cài đặt.',
+            'h2.t': 'Để app tự tải scrcpy', 'h2.d': 'Lần chạy đầu tiên app sẽ tải scrcpy (~15 MB) trực tiếp từ repo Genymobile chính thức.',
+            'h3.t': 'Kết nối & mirror', 'h3.d': 'Bật USB debugging, cắm điện thoại, bấm <code>Refresh</code> → <code>Mirror</code>. Xong.',
+            'o.kicker': 'Bên trong', 'o.title': 'Mọi flag scrcpy chỉ cách một cú click', 'o.sub': 'BasicMirror đưa các tùy chọn hữu ích nhất của scrcpy thành dropdown và checkbox đơn giản.',
+            'o1.d': 'mirror không dây', 'o2.d': 'kiểm soát chất lượng', 'o3.d': 'H.264 / H.265 / AV1', 'o4.d': 'âm thanh máy, Android 11+',
+            'o5.d': 'chế độ chỉ xem', 'o6.d': 'tiết kiệm pin', 'o7.d': 'lý tưởng để demo', 'o8.d': 'cửa sổ theo ý bạn', 'o9.d': 'quay MP4 / MKV', 'o10.d': 'setup nhiều màn hình',
+            'c.kicker': 'Vì sao BasicMirror', 'c.title': 'GUI vs. dòng lệnh', 'c.sub': 'Cùng một engine, bỏ phần gõ lệnh.',
+            'c.h1': 'Tính năng', 'c.h3': 'Dòng lệnh', 'c.manual': 'Thủ công', 'c.manual2': 'Thủ công',
+            'c.r1': 'Mirror một cú click', 'c.r2': 'Tự tải scrcpy', 'c.r3': 'Hỗ trợ đa thiết bị', 'c.r4': 'Lưu hồ sơ thiết bị', 'c.r5': 'Quay video', 'c.r6': 'Giao diện đa ngôn ngữ',
+            'd.kicker': 'Tải xuống', 'd.title': 'Sẵn sàng khi bạn cần.', 'd.sub': 'Miễn phí, mã nguồn mở, và chỉ bằng ~3% dung lượng một bức ảnh.', 'd.btn': '⬇ Tải BasicMirror v1.0',
+            'd.c1': '📦 <b>~50 KB</b> portable', 'd.c2': '🪟 Windows 7 / 8 / 10 / 11', 'd.c3': '🧩 .NET Framework 4.8', 'd.c4': '📄 Giấy phép MIT',
+            'foot.text': 'BasicMirror — GUI wrapper cho <a href="https://github.com/Genymobile/scrcpy">scrcpy</a> của Genymobile. Made with ❤️ by anhhackta.',
+            'foot.releases': 'Releases', 'foot.issues': 'Báo lỗi'
+        },
+        ja: {
+            'nav.features': '機能', 'nav.how': '使い方', 'nav.options': 'オプション', 'nav.compare': '比較', 'nav.download': 'ダウンロード',
+            'hero.pill': 'v1.0 · 無料オープンソース · MIT',
+            'hero.title': 'AndroidをPCにミラー。<br><span class="grad">ワンクリック。設定不要。</span>',
+            'hero.sub': 'BasicMirrorはscrcpy用の<code>~50&nbsp;KB</code>ポータブルGUIです。USBまたはWiFiでAndroid端末をミラー・操作・録画。コマンドラインは不要です。',
+            'hero.dl': '⬇ Windows版をダウンロード', 'hero.gh': '★ GitHubで見る',
+            'hero.m1': 'サイズ <b>~50 KB</b>', 'hero.m2': 'OS <b>Windows 7–11</b>', 'hero.m3': 'ランタイム <b>.NET 4.8</b>', 'hero.m4': 'エンジン <b>scrcpy</b>',
+            'mock.devices': 'デバイス', 'mock.video': 'ビデオ', 'mock.size': 'サイズ', 'mock.bitrate': 'ビットレート',
+            'mock.audio': '音声と操作', 'mock.rec': '録画', 'mock.output': '出力先',
+            'mock.c1': '🔊 音声 11+', 'mock.c2': '☀ 画面を常時オン', 'mock.c3': '📌 常に最前面', 'mock.c4': '🖼 ボーダーレス', 'mock.c5': '⛶ フルスクリーン', 'mock.c6': '👁 表示のみ',
+            'mock.mirror': 'ミラー', 'mock.mirrorall': 'すべてミラー', 'mock.refresh': '⟳ 更新', 'mock.wifi': '📶 WiFiポートを開く',
+            'mock.status': '準備完了 · 2台のデバイスを検出',
+            'f.kicker': '機能', 'f.title': '小さなアプリ。本格操作。', 'f.sub': 'scrcpyのすべての機能を、誰でも使えるインターフェースに。',
+            'f1.t': 'ワンクリックミラー', 'f1.d': 'デバイスを接続してミラーを押すだけ。BasicMirrorが最適なscrcpyコマンドを自動生成 — ターミナルもフラグ暗記も不要。',
+            'f2.t': 'マルチデバイス', 'f2.d': 'USBやWiFiで複数のスマホを同時にミラー。デバイスプロファイルとして保存できます。',
+            'f3.t': 'USB → WiFi', 'f3.d': '一度WiFiポートを開けば、ケーブルを抜いてワイヤレスでミラーを続けられます。',
+            'f4.t': '画面録画', 'f4.d': '開始/停止ボタンでMP4・MKV出力。保存先もカスタム可能。',
+            'f5.t': 'scrcpy自動ダウンロード', 'f5.d': '初回起動時にscrcpyをGenymobile公式リポジトリから直接取得。バイナリの再配布はありません。',
+            'f6.t': '軽量＆ポータブル', 'f6.d': '単一の約50 KBのexe。インストール不要、Windows 10以降標準搭載の.NET Framework 4.8のみ。',
+            'h.kicker': 'クイックスタート', 'h.title': '3ステップでミラー完了', 'h.sub': '最初から最後まで1分以内。',
+            'h1.t': 'exeをダウンロード', 'h1.d': 'GitHub Releasesから<code>BasicMirror.exe</code>を入手 — 約50 KBのポータブルファイル1つだけ。',
+            'h2.t': 'scrcpyの自動取得', 'h2.d': '初回起動時にscrcpy（約15 MB）をGenymobile公式リポジトリから直接ダウンロードします。',
+            'h3.t': '接続してミラー', 'h3.d': 'USBデバッグを有効にしてスマホを接続し、<code>更新</code> → <code>ミラー</code>を押すだけ。',
+            'o.kicker': '内部仕組み', 'o.title': 'すべてのscrcpyフラグをワンタップで', 'o.sub': 'scrcpyの便利なオプションをシンプルなドロップダウンとチェックボックスにマッピング。',
+            'o1.d': 'ワイヤレスミラー', 'o2.d': '画質を完全制御', 'o3.d': 'H.264 / H.265 / AV1', 'o4.d': 'デバイス音声、Android 11+',
+            'o5.d': '表示専用モード', 'o6.d': 'バッテリー節約', 'o7.d': 'デモに最適', 'o8.d': '好みのウィンドウ', 'o9.d': 'MP4 / MKV録画', 'o10.d': 'マルチディスプレイ',
+            'c.kicker': 'なぜBasicMirror', 'c.title': 'GUI vs. コマンドライン', 'c.sub': '同じエンジン、タイピングはゼロ。',
+            'c.h1': '機能', 'c.h3': 'コマンドライン', 'c.manual': '手動', 'c.manual2': '手動',
+            'c.r1': 'ワンクリックミラー', 'c.r2': 'scrcpy自動ダウンロード', 'c.r3': 'マルチデバイス対応', 'c.r4': 'デバイスプロファイル保存', 'c.r5': '動画録画', 'c.r6': '多言語UI',
+            'd.kicker': 'ダウンロード', 'd.title': 'いつでもどうぞ。', 'd.sub': '無料・オープンソース。スマホの写真の約3%のサイズです。', 'd.btn': '⬇ BasicMirror v1.0 をダウンロード',
+            'd.c1': '📦 <b>~50 KB</b> ポータブル', 'd.c2': '🪟 Windows 7 / 8 / 10 / 11', 'd.c3': '🧩 .NET Framework 4.8', 'd.c4': '📄 MITライセンス',
+            'foot.text': 'BasicMirror — Genymobile製<a href="https://github.com/Genymobile/scrcpy">scrcpy</a>のGUIラッパー。anhhacktaが❤️を込めて開発。',
+            'foot.releases': 'リリース', 'foot.issues': '不具合報告'
+        },
+        zh: {
+            'nav.features': '功能', 'nav.how': '使用方法', 'nav.options': '选项', 'nav.compare': '对比', 'nav.download': '下载',
+            'hero.pill': 'v1.0 · 免费开源 · MIT',
+            'hero.title': '将 Android 镜像到 PC。<br><span class="grad">一键完成,无需配置。</span>',
+            'hero.sub': 'BasicMirror 是 scrcpy 的 <code>~50&nbsp;KB</code> 便携 GUI — 通过 USB 或 WiFi 镜像、控制并录制 Android 设备,无需命令行。',
+            'hero.dl': '⬇ 下载 Windows 版', 'hero.gh': '★ 在 GitHub 查看',
+            'hero.m1': '大小 <b>~50 KB</b>', 'hero.m2': '系统 <b>Windows 7–11</b>', 'hero.m3': '运行时 <b>.NET 4.8</b>', 'hero.m4': '引擎 <b>scrcpy</b>',
+            'mock.devices': '设备', 'mock.video': '视频', 'mock.size': '尺寸', 'mock.bitrate': '码率',
+            'mock.audio': '音频与控制', 'mock.rec': '录制', 'mock.output': '保存至',
+            'mock.c1': '🔊 音频 11+', 'mock.c2': '☀ 保持屏幕常亮', 'mock.c3': '📌 窗口置顶', 'mock.c4': '🖼 无边框', 'mock.c5': '⛶ 全屏', 'mock.c6': '👁 仅查看',
+            'mock.mirror': '镜像', 'mock.mirrorall': '全部镜像', 'mock.refresh': '⟳ 刷新', 'mock.wifi': '📶 打开 WiFi 端口',
+            'mock.status': '就绪 · 发现 2 台设备',
+            'f.kicker': '功能', 'f.title': '小应用,强控制。', 'f.sub': 'scrcpy 的全部能力,装进人人都能用的界面。',
+            'f1.t': '一键镜像', 'f1.d': '连接设备并按"镜像"。BasicMirror 自动生成正确的 scrcpy 命令 — 无需终端,无需记参数。',
+            'f2.t': '多设备', 'f2.d': '通过 USB 或 WiFi 同时镜像多部手机,并保存为设备配置文件供下次使用。',
+            'f3.t': 'USB → WiFi', 'f3.d': '打开一次 WiFi 端口,拔掉数据线,继续通过局域网无线镜像。',
+            'f4.t': '屏幕录制', 'f4.d': '开始/停止控制,MP4 和 MKV 输出,自定义保存路径,都在主窗口中。',
+            'f5.t': '自动下载 scrcpy', 'f5.d': '首次启动时直接从 Genymobile 官方仓库获取 scrcpy — 绝不重新托管二进制文件。',
+            'f6.t': '轻量便携', 'f6.d': '单个约 50 KB 的 exe,无需安装。仅需 Windows 10+ 自带的 .NET Framework 4.8。',
+            'h.kicker': '快速上手', 'h.title': '三步完成镜像', 'h.sub': '从头到尾不到一分钟。',
+            'h1.t': '下载 exe', 'h1.d': '从 GitHub Releases 获取 <code>BasicMirror.exe</code> — 单个约 50 KB 的便携文件,无需安装。',
+            'h2.t': '自动获取 scrcpy', 'h2.d': '首次启动时直接从 Genymobile 官方仓库下载 scrcpy(约 15 MB)。',
+            'h3.t': '连接并镜像', 'h3.d': '开启 USB 调试,插入手机,点击 <code>刷新</code> → <code>镜像</code>,完成。',
+            'o.kicker': '深入了解', 'o.title': '所有 scrcpy 参数,一键切换', 'o.sub': 'BasicMirror 将 scrcpy 最实用的选项映射为简单的下拉框和复选框。',
+            'o1.d': '无线镜像', 'o2.d': '完全画质控制', 'o3.d': 'H.264 / H.265 / AV1', 'o4.d': '设备音频,Android 11+',
+            'o5.d': '仅查看模式', 'o6.d': '省电友好', 'o7.d': '演示利器', 'o8.d': '窗口随心所欲', 'o9.d': 'MP4 / MKV 录制', 'o10.d': '多显示器设置',
+            'c.kicker': '为什么选择 BasicMirror', 'c.title': 'GUI vs. 命令行', 'c.sub': '同一个引擎,免去打字。',
+            'c.h1': '功能', 'c.h3': '命令行', 'c.manual': '手动', 'c.manual2': '手动',
+            'c.r1': '一键镜像', 'c.r2': '自动下载 scrcpy', 'c.r3': '多设备支持', 'c.r4': '保存设备配置', 'c.r5': '视频录制', 'c.r6': '多语言界面',
+            'd.kicker': '下载', 'd.title': '随时为您准备。', 'd.sub': '免费开源,体积仅为手机照片的 3% 左右。', 'd.btn': '⬇ 下载 BasicMirror v1.0',
+            'd.c1': '📦 <b>~50 KB</b> 便携', 'd.c2': '🪟 Windows 7 / 8 / 10 / 11', 'd.c3': '🧩 .NET Framework 4.8', 'd.c4': '📄 MIT 许可证',
+            'foot.text': 'BasicMirror — Genymobile <a href="https://github.com/Genymobile/scrcpy">scrcpy</a> 的 GUI 封装。由 anhhackta 用 ❤️ 制作。',
+            'foot.releases': '发布', 'foot.issues': '问题反馈'
+        }
+    };
+
+    const LANG_LABEL = { en: 'EN', vi: 'VI', ja: 'JA', zh: 'ZH' };
+
+    function applyLang(lang) {
+        if (!I18N[lang]) lang = 'en';
+        const dict = I18N[lang], en = I18N.en;
+        document.documentElement.lang = lang;
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const k = el.dataset.i18n;
+            if (dict[k] !== undefined) el.textContent = dict[k];
+            else if (en[k] !== undefined) el.textContent = en[k];
+        });
+        document.querySelectorAll('[data-i18n-html]').forEach(el => {
+            const k = el.dataset.i18nHtml;
+            if (dict[k] !== undefined) el.innerHTML = dict[k];
+            else if (en[k] !== undefined) el.innerHTML = en[k];
+        });
+        document.getElementById('langCode').textContent = LANG_LABEL[lang];
+        document.querySelectorAll('.lang-menu button').forEach(b =>
+            b.classList.toggle('active', b.dataset.lang === lang));
+        try { localStorage.setItem('bm-lang', lang); } catch (e) {}
+    }
+
+    /* ==================== Theme ==================== */
+    function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#1a1b26' : '#f4f5fb';
+        try { localStorage.setItem('bm-theme', theme); } catch (e) {}
+    }
+
+    (function init() {
+        let theme, lang;
+        try {
+            theme = localStorage.getItem('bm-theme');
+            lang = localStorage.getItem('bm-lang');
+        } catch (e) {}
+        if (!theme) theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        if (!lang) {
+            const nl = (navigator.language || 'en').toLowerCase();
+            lang = nl.startsWith('vi') ? 'vi' : nl.startsWith('ja') ? 'ja' : nl.startsWith('zh') ? 'zh' : 'en';
+        }
+        applyTheme(theme);
+        applyLang(lang);
+    })();
+
+    document.getElementById('themeBtn').addEventListener('click', () => {
+        applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+    });
+
+    /* Language dropdown */
+    const langBtn = document.getElementById('langBtn');
+    const langMenu = document.getElementById('langMenu');
+    langBtn.addEventListener('click', e => { e.stopPropagation(); langMenu.classList.toggle('open'); });
+    document.addEventListener('click', () => langMenu.classList.remove('open'));
+    langMenu.querySelectorAll('button').forEach(b =>
+        b.addEventListener('click', () => { applyLang(b.dataset.lang); langMenu.classList.remove('open'); }));
+
+    /* Mobile nav */
+    const burger = document.getElementById('burger');
+    const navLinks = document.getElementById('navLinks');
+    burger.addEventListener('click', e => { e.stopPropagation(); navLinks.classList.toggle('open'); });
+    navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
+    document.addEventListener('click', e => { if (!navLinks.contains(e.target)) navLinks.classList.remove('open'); });
+
+    /* Scroll reveal */
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+        });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+    </script>
 </body>
 </html>
